@@ -1,0 +1,19 @@
+chat_creation:
+  cron: "* * * * *"
+  class: "ChatCreationWorker"
+  queue: default
+
+message_creation:
+  cron: "* * * * *"
+  class: "MessageCreationWorker"
+  queue: default
+
+chat_count:
+  cron: "* * * * *"
+  class: "ChatCountWorker"
+  queue: default
+
+message_count:
+  cron: "* * * * *"
+  class: "MessageCountWorker"
+  queue: default

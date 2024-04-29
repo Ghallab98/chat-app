@@ -1,0 +1,1 @@
+Searchkick.client = Elasticsearch::Client.new(urls: "http://localhost:9200")
