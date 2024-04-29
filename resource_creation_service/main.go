@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/gorilla/mux"
 )
 
 type Chat struct {
@@ -24,30 +25,29 @@ type Message struct {
 }
 
 func main() {
+    r := mux.NewRouter()
     rdb := redis.NewClient(&redis.Options{
         Addr:     os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT"),
         Password: "",
         DB:       0,
     })
 
-    http.HandleFunc("/create-chat", func(w http.ResponseWriter, r *http.Request) {
+    r.HandleFunc("/applications/{application_token}/chats", func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodPost {
             http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
             return
         }
 
         var chat Chat
-        err := json.NewDecoder(r.Body).Decode(&chat)
-        if err != nil {
-            http.Error(w, "Failed to parse chat data", http.StatusBadRequest)
-            return
-        }
-
         // Get the context from the incoming request
         ctx := r.Context()
 
+        // Extract application_token and chat_number from the URL
+        vars := mux.Vars(r)
+        applicationToken := vars["application_token"]
+
         // Increment chats_count in Redis hash using application_token as key
-        chatNumber, err := rdb.HIncrBy(ctx, "applications", chat.ApplicationToken, 1).Result()
+        chatNumber, err := rdb.HIncrBy(ctx, "applications", applicationToken, 1).Result()
         if err != nil {
             http.Error(w, "Failed to increment chat number", http.StatusInternalServerError)
             return
@@ -55,6 +55,7 @@ func main() {
 
         // Set the ChatNumber field of the chat struct
         chat.Number = chatNumber
+        chat.ApplicationToken = applicationToken
 
         // Convert the chat struct into a JSON string
         chatJSON, err := json.Marshal(chat)
@@ -74,27 +75,41 @@ func main() {
         // Respond with success and chat_number
         w.WriteHeader(http.StatusCreated)
         w.Write([]byte(strconv.FormatInt(chatNumber, 10)))
-    })
+    }).Methods("POST")
 
     // Define HTTP handler function to handle message creation requests
-    http.HandleFunc("/create-message", func(w http.ResponseWriter, r *http.Request) {
+    r.HandleFunc("/applications/{application_token}/chats/{chat_number}/messages", func(w http.ResponseWriter, r *http.Request) {
         if r.Method != http.MethodPost {
             http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
             return
         }
     
         var message Message
-        err := json.NewDecoder(r.Body).Decode(&message)
+        var requestBody struct {
+            Body string `json:"body"`
+        }
+
+        // Decode the request body into the requestBody struct
+        err := json.NewDecoder(r.Body).Decode(&requestBody)
         if err != nil {
-            http.Error(w, "Failed to parse message data", http.StatusBadRequest)
+            http.Error(w, "Failed to parse request body", http.StatusBadRequest)
             return
         }
 
         // Get the context from the incoming request
         ctx := r.Context()
 
+        // Extract application_token and chat_number from the URL
+        vars := mux.Vars(r)
+        applicationToken := vars["application_token"]
+        chatNumber, err := strconv.Atoi(vars["chat_number"])
+        if err != nil {
+            http.Error(w, "Invalid chat number", http.StatusBadRequest)
+            return
+        }
+
         // Create a key from application_token and chat_number
-        key := fmt.Sprintf("%s,%d", message.ApplicationToken, message.ChatNumber)
+        key := fmt.Sprintf("%s,%d", applicationToken, chatNumber)
         // Increment messages_count in Redis hash using the key
         messageNumber, err := rdb.HIncrBy(ctx, "chats", key, 1).Result()
         if err != nil {
@@ -104,6 +119,9 @@ func main() {
 
         // Set the MessageNumber field of the message struct
         message.Number = messageNumber
+        message.ApplicationToken = applicationToken
+        message.ChatNumber = chatNumber
+        message.Body = requestBody.Body
 
         // Convert the message struct into a JSON string
         messageJSON, err := json.Marshal(message)
@@ -122,9 +140,9 @@ func main() {
         // Respond with success and message_number
         w.WriteHeader(http.StatusCreated)
         w.Write([]byte(strconv.FormatInt(messageNumber, 10)))
-    })
+    }).Methods("POST")
 
     // Start HTTP server
     log.Println("Starting Go server on port :8080")
-    http.ListenAndServe(":8080", nil)
+    http.ListenAndServe(":8080", r)
 }
