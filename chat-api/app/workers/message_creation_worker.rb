@@ -47,6 +47,7 @@ class MessageCreationWorker
   def import_messages(messages)
     begin
       Message.import(messages, validate: true)
+      Message.reindex
     rescue => e
       logger.error "Failed to import messages: #{e.message}"
       raise
