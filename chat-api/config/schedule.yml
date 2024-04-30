@@ -9,11 +9,11 @@ message_creation:
   queue: default
 
 chat_count:
-  cron: "* * * * *"
+  cron: "0 * * * *"
   class: "ChatCountWorker"
   queue: default
 
 message_count:
-  cron: "* * * * *"
+  cron: "0 * * * *"
   class: "MessageCountWorker"
   queue: default
