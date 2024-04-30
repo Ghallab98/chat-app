@@ -15,6 +15,11 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USERNAME}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.2
@@ -25,7 +30,7 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
     healthcheck:
-      test: ["CMD", "curl", "http://localhost:9200"]
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -37,9 +42,12 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - mysql
-      - redis
-      - elasticsearch
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     environment:
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
@@ -56,9 +64,12 @@ services:
       context: ./chat-api
       dockerfile: Dockerfile
     depends_on:
-      - mysql
-      - redis
-      - elasticsearch
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     environment:
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
