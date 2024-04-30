@@ -1,1 +1,1 @@
-Searchkick.client = Elasticsearch::Client.new(urls: "http://localhost:9200")
+Searchkick.client = Elasticsearch::Client.new(urls: ENV['ELASTICSEARCH_URL'], retry_on_failure: true, transport_options: {request: {timeout: 250}})

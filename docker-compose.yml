@@ -16,6 +16,20 @@ services:
       MYSQL_USER: ${MYSQL_USERNAME}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.2
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    healthcheck:
+      test: ["CMD", "curl", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   chat_api:
     build:
       context: ./chat-api
@@ -34,8 +48,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      ELASTICSEARCH_HOST: elasticsearch
-      ELASTICSEARCH_PORT: 9200
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
 
   sidekiq:
@@ -54,8 +67,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      ELASTICSEARCH_HOST: elasticsearch
-      ELASTICSEARCH_PORT: 9200
+      ELASTICSEARCH_URL: "http://elasticsearch:9200"
       SECRET_KEY_BASE: ${SECRET_KEY_BASE}
     command: bundle exec sidekiq
 
@@ -70,17 +82,3 @@ services:
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.2
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-    healthcheck:
-      test: ["CMD", "curl", "http://localhost:9200"]
-      interval: 30s
-      timeout: 10s
-      retries: 5

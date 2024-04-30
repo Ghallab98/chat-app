@@ -1,5 +1,8 @@
 class MessageCreationWorker
   include Sidekiq::Worker
+  include Elasticsearch::Model::Callbacks
+
+  Elasticsearch::Model.client = Elasticsearch::Client.new host: ENV['ELASTICSEARCH_URL']
 
   def perform
     redis = Redis.new(host: ENV['REDIS_HOST'], port: ENV['REDIS_PORT'])
