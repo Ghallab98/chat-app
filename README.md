@@ -100,7 +100,7 @@ This repository contains the code for building a RESTful API for a chat system. 
 4. Run the following command:
 
 ```bash
-docker-compose up --build
+docker-compose up
 ```
 
 This command will build and run the entire stack including the Ruby on Rails application, workers, MySQL, ElasticSearch, Redis, and any other required components.
